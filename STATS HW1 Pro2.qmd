@@ -1,0 +1,112 @@
+---
+title: "Problem2"
+format: html
+---
+
+---
+title: "STATS 506 Assignment1 Prob2"
+format: html
+---
+
+## a. Import the data into a data.frame in R.
+
+```{r}
+# Download the dataset and clean the variable names
+
+library(dplyr)
+salary_data <- read.csv("AskAManager.csv")
+```
+
+## b. Clean up the variable names.
+
+```{r}
+new_names <- c("Time","Old","Industry","Job_title","Job_title_details",
+               "Annual_salary","Compensation","Currency","Other_currency",
+               "Income_details","Country","State","City","Overall_experience",
+               "Field_experience","Education_background","Gender","Race")
+# Simplify the variable names and assign them to salary_data
+colnames(salary_data)[2:19]<- new_names
+colnames(salary_data)
+```
+
+## c. Restrict the data to those being paid in US dollars (USD).
+
+```{r}
+before_number <- nrow(salary_data)
+before_number
+salary_data_usd<-salary_data%>%
+  filter(Currency=="USD")
+salary_data_usd
+after_number <-nrow(salary_data_usd)
+after_number 
+
+cat("Before restricting the data:", before_number,"\n")
+cat("After restricting the data paid in USD:", after_number,"\n")
+```
+
+## d. Eliminate the impossible ages, years of field experience and total experience
+
+```{r}
+# For the age less than 18, it is illegal;
+# For the age more than 65, normally it is legal to have worked for a long time;
+# We switch these variables to factor form, so we have an order.
+
+# Filter the age under 18
+salary_data_usd <- subset(salary_data_usd,!grepl("under 18", salary_data_usd$Old))
+
+# Filter N/A in overall experience and field experience
+salary_data_usd <- salary_data_usd %>%
+  filter(!is.na(Overall_experience) & !is.na(Field_experience))
+
+nrow(salary_data_usd)
+
+# Switch the overall experience and field experience to factor form
+# Define levels with ordered factors for comparison
+experience_levels <- c("1 year or less","2 - 4 years ","5-7 years","8 - 10 years","11 - 20 years","21 - 30 years","31 - 40 years","41 years or more")
+
+salary_data_usd$Field_experience <- factor(salary_data_usd$Field_experience,levels = experience_levels, ordered=TRUE)
+salary_data_usd$Overall_experience <- factor(salary_data_usd$Overall_experience,levels = experience_levels, ordered=TRUE)
+
+# Filter the Field experiences is less than or equal to Overall_experience
+filtered_salary_data<- salary_data_usd %>%
+  filter(Field_experience<=Overall_experience)
+
+nrow(filtered_salary_data)
+
+cat("The number of filtering unreasonable ages and experience is:", nrow(filtered_salary_data))
+```
+
+## e. Eliminate the rows of extremely low or extremely high salaries
+
+```{r}
+summary(filtered_salary_data$Annual_salary)
+
+# Draw a salary distribution boxplot
+boxplot(filtered_salary_data$Annual_salary, main="Annual Salary
+        Distribution",horizontal = TRUE)
+
+# From the website https://dqydj.com/individual-income-by-year/, we can find that the top1% annual salary in 2023 is	$407,500. So we pick up $410,000 as the upper threshold.
+# It seems impossible to earn $1000 per year, so we pick it up as our lower threshold. Maybe something is wrong in these figures.
+upper_threshold <- 410000
+lower_threshold <- 1000
+
+filtered_salary_data_2 <- filtered_salary_data %>%
+  filter(Annual_salary >= lower_threshold & Annual_salary <= upper_threshold)
+final_example_size <- nrow(filtered_salary_data_2)
+
+cat("The final sample size is:", final_example_size)
+
+```
+
+## f. Try to find the relationship between salary and education level when overall_experience is considered.
+
+```{r}
+# We can build a linear regression model to analyze how education background can affect annual salary, taking overall experience into account.
+model <- lm(Annual_salary ~ Education_background + Overall_experience, data = filtered_salary_data_2)
+
+summary(model)
+
+```
+
+There is a statistical association between education and salary, controlling the overall working experience. We can see that compared to other degree, the high school degree has an obvious negative correlation with annual salary and the p-value is less than 0.001. Compared with other degree in this data set, individuals with high school degree have \$19,398 fewer. Also, the PhD has an obvious positive correlation with annual salary and the p-value is less than 0.01. Compared with people who have other degree in the data set, people with PhD have \$13,283 more. The correlation between people with professional degree like MD, JD and annual salary have an obvious p-value, meaning having stronger correlation.
+

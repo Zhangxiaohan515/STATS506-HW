@@ -1,0 +1,181 @@
+---
+title: "Problem3"
+format: html
+---
+
+## a. To confirm whether a positive number is a Palindrome
+
+```{r}
+#' Title: isPalindromic
+#'
+#' @param n: the input number
+#'
+#' @return Whether is a Palindrome and its reverse
+
+  # Switch the integer to the character and reverse it
+isPalindromic <- function(n) {
+  
+  # Ensure the input is a positive integer
+  if (!is.numeric(n) || n <= 0 || n %% 1 != 0) {
+    stop("Input must be a positive integer.")
+  }
+  original_number <- n
+  reversed <- 0
+  
+  # Use mathematical method 
+ while (n>0) {
+    last_digit <- n %% 10
+    reversed <- reversed * 10 + last_digit
+    n <- n %/% 10
+ } 
+ 
+  # Check whether it is a Palindrome
+  is_palindromic <- (original_number==reversed)
+  return(list(isPalindromic = is_palindromic, reversed = reversed))
+}
+```
+
+## b. To find the next palindrome
+
+```{r}
+#' Title: NextPalindrome
+#'
+#' @param n: the input number
+#'
+#' @return next Palindrome
+
+nextPalindrome <- function(n) {
+  # Check whether the input is positive integer
+  if (!is.numeric(n) || n <= 0 || n %% 1 != 0) {
+    stop("Input must be a positive integer.")
+  }
+  
+  # Define a function to check whether it is a Palindrome
+  isPalindromic<- function(x){
+    original_number <- x
+    reversed <- 0
+  
+  # Use mathematical method 
+  while (x>0) {
+    last_digit <- x %% 10
+    reversed <- reversed * 10 + last_digit
+    x <- x %/% 10
+ } 
+  
+    return(original_number==reversed)}
+
+  # The next number until find the Palindrome
+  next_number <- n + 1
+  while (!isPalindromic(next_number)){
+    next_number <- next_number + 1
+  }
+  
+  return(next_number)
+}
+```
+
+## c. Use function to find the next palindrome
+
+```{r}
+print(isPalindromic(728827)) 
+print(isPalindromic(670)) 
+print(nextPalindrome(391)) 
+print(nextPalindrome(9928))
+print(nextPalindrome(19272719)) 
+print(nextPalindrome(90)) 
+print(nextPalindrome(2))
+
+```
+
+We find when we input the number with zero in the end, it isn't a Palindrome. However, the reversed number of them, all zero can be ignored.
+=======
+---
+title: "STATS 506 Assignment1 Prob3"
+format: html
+---
+
+## a. To confirm whether a positive number is a Palindrome
+
+```{r}
+#' Title: isPalindromic
+#'
+#' @param n: the input number
+#'
+#' @return Whether is a Palindrome and its reverse
+
+  # Switch the integer to the character and reverse it
+isPalindromic <- function(n) {
+  
+  # Ensure the input is a positive integer
+  if (!is.numeric(n) || n <= 0 || n %% 1 != 0) {
+    stop("Input must be a positive integer.")
+  }
+  original_number <- n
+  reversed <- 0
+  
+  # Use mathematical method 
+ while (n>0) {
+    last_digit <- n %% 10
+    reversed <- reversed * 10 + last_digit
+    n <- n %/% 10
+ } 
+ 
+  # Check whether it is a Palindrome
+  is_palindromic <- (original_number==reversed)
+  return(list(isPalindromic = is_palindromic, reversed = reversed))
+}
+```
+
+## b. To find the next palindrome
+
+```{r}
+#' Title: NextPalindrome
+#'
+#' @param n: the input number
+#'
+#' @return next Palindrome
+
+nextPalindrome <- function(n) {
+  # Check whether the input is positive integer
+  if (!is.numeric(n) || n <= 0 || n %% 1 != 0) {
+    stop("Input must be a positive integer.")
+  }
+  
+  # Define a function to check whether it is a Palindrome
+  isPalindromic<- function(x){
+    original_number <- x
+    reversed <- 0
+  
+  # Use mathematical method 
+  while (x>0) {
+    last_digit <- x %% 10
+    reversed <- reversed * 10 + last_digit
+    x <- x %/% 10
+ } 
+  
+    return(original_number==reversed)}
+
+  # The next number until find the Palindrome
+  next_number <- n + 1
+  while (!isPalindromic(next_number)){
+    next_number <- next_number + 1
+  }
+  
+  return(next_number)
+}
+```
+
+## c. Use function to find the next palindrome
+
+```{r}
+print(isPalindromic(728827)) 
+print(isPalindromic(670)) 
+print(nextPalindrome(391)) 
+print(nextPalindrome(9928))
+print(nextPalindrome(19272719)) 
+print(nextPalindrome(90)) 
+print(nextPalindrome(2))
+
+```
+
+We find when we input the number with zero in the end, it isn't a Palindrome. However, the reversed number of them, all zero can be ignored.

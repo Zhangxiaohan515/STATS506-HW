@@ -1,0 +1,333 @@
+---
+title: "Problem1"
+format: html
+---
+---
+title: "STATS 506 Asignment1 Prob1"
+format: html
+---
+
+## a. Get the data set and rename the column of wine.data
+
+```{r}
+wine_data <- read.csv("C:/Preparation for UMich/Computational Methods and Tools-506/Assignment-for-STATS506/wine/wine.data",header=FALSE)
+
+column_name <- c("Types","Alcohol", "Malic_acid",
+                 "Ash","Alcalinity_of_ash","Magnesium","Total_phenols",
+                 "Flavanoids","Nonflavanoids_phenols","Proanthocyanins",
+                 "Color_intensity","Hue","OD280/OD315_of_diluted wines ","Proline")
+colnames(wine_data) <- column_name
+```
+
+## b. Check whether the number of different types is equal to the information in wine.names
+
+```{r}
+types_count <-table(wine_data$Types)
+types_count[1]==59
+types_count[2]==71
+types_count[3]==48
+```
+
+## c.1. Compute the correlation between alcohol content and color intensity
+
+```{r}
+# total correlation
+library("ggplot2")
+ggplot(wine_data,aes(Alcohol,Color_intensity))+geom_point()
+correlation <- cor(wine_data$Alcohol,wine_data$Color_intensity)
+cat("We can see the correlation between alcohol and color intensity is ", correlation)
+
+# correlation by types
+library("dplyr")
+correlation_by_types <- wine_data %>%
+  group_by(Types) %>%
+  summarise(correlation=cor(Alcohol, Color_intensity))
+
+correlation_by_types
+
+```
+
+## c.2. To find the highest correlation and the lowest correlation.
+
+```{r}
+max_correlation_type <- correlation_by_types[which.max(correlation_by_types$correlation),]
+min_correlation_type <- correlation_by_types[which.min(correlation_by_types$correlation),]
+max_correlation_type
+min_correlation_type
+
+```
+
+## c.3. To find the alcohol content with the highest color intensity
+
+```{r}
+highest_color_intensity_index = which.max(wine_data$Color_intensity)
+alcohol_content1 <- wine_data$Alcohol[highest_color_intensity_index]
+alcohol_content1
+cat("The alcohol content with the highest color intensity is: ",alcohol_content1)
+```
+
+14.34.
+
+## c.4. To find the percentage of wines which have a higher proanthocyanins
+
+```{r}
+higher_counts <- sum(wine_data$Proanthocyanins>wine_data$Ash)
+total_numbers <- nrow(wine_data)
+per_higher_proproanthocyanins <- higher_counts/total_numbers*100
+print(paste("The percentage of wines had a higher proanthocyanins is",round(per_higher_proproanthocyanins,3),"%."))
+```
+
+## d. Create a table: To compute overall_average
+
+```{r}
+overall_aver <- wine_data %>%
+  summarise(across(everything(),\(x) mean(x,na.rm=TRUE)))
+```
+
+### Compute the average in every type
+
+```{r}
+type_aver <- wine_data %>%
+  group_by(Types) %>%
+  summarise(across(everything(),\(x) mean(x,na.rm=TRUE)))  
+```
+
+### Combine overall average and type average
+
+```{r}
+overall_aver <- overall_aver %>%
+  mutate(Types="Overall")
+
+type_aver <- type_aver %>%
+  mutate(Types = as.character(Types))
+overall_aver <- overall_aver %>%
+  mutate(Types = as.character(Types))
+
+combined_aver <- bind_rows(overall_aver, type_aver)
+
+combined_aver
+```
+
+## e. Commit the t-test(not have the formula)
+
+```{r}
+t_test1_2 <- t.test(wine_data$Total_phenols[wine_data$Types==1],
+                    wine_data$Total_phenols[wine_data$Types==2])
+t_test2_3 <- t.test(wine_data$Total_phenols[wine_data$Types==2],
+                    wine_data$Total_phenols[wine_data$Types==3])
+t_test1_3 <- t.test(wine_data$Total_phenols[wine_data$Types==1],
+                    wine_data$Total_phenols[wine_data$Types==3])
+
+t_test1_2
+t_test2_3
+t_test1_3
+
+```
+
+### Commit the t-test(have the formula) manually
+
+```{r}
+type_1 <- wine_data$Total_phenols[wine_data$Types==1]
+type_2 <- wine_data$Total_phenols[wine_data$Types==2]
+type_3 <- wine_data$Total_phenols[wine_data$Types==3]
+X_1_bar <- mean(type_1)
+X_2_bar <- mean(type_2)
+X_3_bar <- mean(type_3)
+
+var_1<-var(type_1)
+var_2<-var(type_2)
+var_3<-var(type_3)
+
+n_1 <- length(type_1)
+n_2 <- length(type_2)
+n_3 <- length(type_3)
+
+s_p12 <- ((n_1-1)*var_1 +(n_2-1)*var_2)/(n_1+n_2-2)
+s_p13 <-((n_1-1)*var_1 +(n_3-1)*var_3)/(n_1+n_3-2)
+s_p23 <-((n_2-1)*var_2 +(n_3-1)*var_3)/(n_2+n_3-2)
+
+t_12 <- (X_1_bar-X_2_bar)/sqrt(s_p12*(1/n_1+1/n_2))
+t_23 <- (X_2_bar-X_3_bar)/sqrt(s_p23*(1/n_2+1/n_3))
+t_13 <- (X_1_bar-X_3_bar)/sqrt(s_p13*(1/n_1+1/n_3))
+
+# Compute degree of freedom
+df_12 <- n_1 + n_2 - 2
+df_23 <- n_2 + n_3 - 2
+df_13 <- n_1 + n_3 - 2
+
+# pt() function is to compute Cumulative Distribution Function of t-distribution 
+p_value_12 <- 2 * (1 - pt(abs(t_12), df_12))
+p_value_23 <- 2 * (1 - pt(abs(t_23), df_23))
+p_value_13 <- 2 * (1 - pt(abs(t_13), df_13))
+
+# Output p-values
+p_value_12
+p_value_23
+p_value_13
+```
+=======
+---
+title: "STATS 506 Asignment1 Prob1"
+format: html
+---
+
+## a. Get the data set and rename the column of wine.data
+
+```{r}
+wine_data <- read.csv("C:/Preparation for UMich/Computational Methods and Tools-506/Assignment-for-STATS506/wine/wine.data",header=FALSE)
+
+column_name <- c("Types","Alcohol", "Malic_acid",
+                 "Ash","Alcalinity_of_ash","Magnesium","Total_phenols",
+                 "Flavanoids","Nonflavanoids_phenols","Proanthocyanins",
+                 "Color_intensity","Hue","OD280/OD315_of_diluted wines ","Proline")
+colnames(wine_data) <- column_name
+```
+
+## b. Check whether the number of different types is equal to the information in wine.names
+
+```{r}
+types_count <-table(wine_data$Types)
+types_count[1]==59
+types_count[2]==71
+types_count[3]==48
+```
+
+## c.1. Compute the correlation between alcohol content and color intensity
+
+```{r}
+# total correlation
+library("ggplot2")
+ggplot(wine_data,aes(Alcohol,Color_intensity))+geom_point()
+correlation <- cor(wine_data$Alcohol,wine_data$Color_intensity)
+cat("We can see the correlation between alcohol and color intensity is ", correlation)
+
+# correlation by types
+library("dplyr")
+correlation_by_types <- wine_data %>%
+  group_by(Types) %>%
+  summarise(correlation=cor(Alcohol, Color_intensity))
+
+correlation_by_types
+
+```
+
+## c.2. To find the highest correlation and the lowest correlation.
+
+```{r}
+max_correlation_type <- correlation_by_types[which.max(correlation_by_types$correlation),]
+min_correlation_type <- correlation_by_types[which.min(correlation_by_types$correlation),]
+max_correlation_type
+min_correlation_type
+
+```
+
+## c.3. To find the alcohol content with the highest color intensity
+
+```{r}
+highest_color_intensity_index = which.max(wine_data$Color_intensity)
+alcohol_content1 <- wine_data$Alcohol[highest_color_intensity_index]
+alcohol_content1
+cat("The alcohol content with the highest color intensity is: ",alcohol_content1)
+```
+
+14.34.
+
+## c.4. To find the percentage of wines which have a higher proanthocyanins
+
+```{r}
+higher_counts <- sum(wine_data$Proanthocyanins>wine_data$Ash)
+total_numbers <- nrow(wine_data)
+per_higher_proproanthocyanins <- higher_counts/total_numbers*100
+print(paste("The percentage of wines had a higher proanthocyanins is",round(per_higher_proproanthocyanins,3),"%."))
+```
+
+## d. Create a table: To compute overall_average
+
+```{r}
+overall_aver <- wine_data %>%
+  summarise(across(everything(),\(x) mean(x,na.rm=TRUE)))
+```
+
+### Compute the average in every type
+
+```{r}
+type_aver <- wine_data %>%
+  group_by(Types) %>%
+  summarise(across(everything(),\(x) mean(x,na.rm=TRUE)))  
+```
+
+### Combine overall average and type average
+
+```{r}
+overall_aver <- overall_aver %>%
+  mutate(Types="Overall")
+
+type_aver <- type_aver %>%
+  mutate(Types = as.character(Types))
+overall_aver <- overall_aver %>%
+  mutate(Types = as.character(Types))
+
+combined_aver <- bind_rows(overall_aver, type_aver)
+
+combined_aver
+```
+
+## e. Commit the t-test(not have the formula)
+
+```{r}
+t_test1_2 <- t.test(wine_data$Total_phenols[wine_data$Types==1],
+                    wine_data$Total_phenols[wine_data$Types==2])
+t_test2_3 <- t.test(wine_data$Total_phenols[wine_data$Types==2],
+                    wine_data$Total_phenols[wine_data$Types==3])
+t_test1_3 <- t.test(wine_data$Total_phenols[wine_data$Types==1],
+                    wine_data$Total_phenols[wine_data$Types==3])
+
+t_test1_2
+t_test2_3
+t_test1_3
+
+```
+
+### Commit the t-test(have the formula) manually
+
+```{r}
+type_1 <- wine_data$Total_phenols[wine_data$Types==1]
+type_2 <- wine_data$Total_phenols[wine_data$Types==2]
+type_3 <- wine_data$Total_phenols[wine_data$Types==3]
+X_1_bar <- mean(type_1)
+X_2_bar <- mean(type_2)
+X_3_bar <- mean(type_3)
+
+var_1<-var(type_1)
+var_2<-var(type_2)
+var_3<-var(type_3)
+
+n_1 <- length(type_1)
+n_2 <- length(type_2)
+n_3 <- length(type_3)
+
+s_p12 <- ((n_1-1)*var_1 +(n_2-1)*var_2)/(n_1+n_2-2)
+s_p13 <-((n_1-1)*var_1 +(n_3-1)*var_3)/(n_1+n_3-2)
+s_p23 <-((n_2-1)*var_2 +(n_3-1)*var_3)/(n_2+n_3-2)
+
+t_12 <- (X_1_bar-X_2_bar)/sqrt(s_p12*(1/n_1+1/n_2))
+t_23 <- (X_2_bar-X_3_bar)/sqrt(s_p23*(1/n_2+1/n_3))
+t_13 <- (X_1_bar-X_3_bar)/sqrt(s_p13*(1/n_1+1/n_3))
+
+# Compute degree of freedom
+df_12 <- n_1 + n_2 - 2
+df_23 <- n_2 + n_3 - 2
+df_13 <- n_1 + n_3 - 2
+
+# pt() function is to compute Cumulative Distribution Function of t-distribution 
+p_value_12 <- 2 * (1 - pt(abs(t_12), df_12))
+p_value_23 <- 2 * (1 - pt(abs(t_23), df_23))
+p_value_13 <- 2 * (1 - pt(abs(t_13), df_13))
+
+# Output p-values
+p_value_12
+p_value_23
+p_value_13
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
