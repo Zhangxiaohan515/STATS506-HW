@@ -2,11 +2,8 @@
 title: "Problem2"
 format: html
 ---
+My github is: https://github.com/Zhangxiaohan515/STATS506-HW
 
----
-title: "STATS 506 Assignment1 Prob2"
-format: html
----
 
 ## a. Import the data into a data.frame in R.
 

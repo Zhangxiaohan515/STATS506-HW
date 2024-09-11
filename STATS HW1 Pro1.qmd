@@ -2,10 +2,7 @@
 title: "Problem1"
 format: html
 ---
----
-title: "STATS 506 Asignment1 Prob1"
-format: html
----
+My github is: https://github.com/Zhangxiaohan515/STATS506-HW
 
 ## a. Get the data set and rename the column of wine.data
 

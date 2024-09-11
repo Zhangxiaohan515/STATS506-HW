@@ -2,6 +2,7 @@
 title: "Problem3"
 format: html
 ---
+My github is: https://github.com/Zhangxiaohan515/STATS506-HW
 
 ## a. To confirm whether a positive number is a Palindrome
 
