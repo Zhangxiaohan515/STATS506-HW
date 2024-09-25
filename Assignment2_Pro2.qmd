@@ -1,0 +1,87 @@
+---
+title: "Assignment2#Pro_2"
+format: html
+---
+
+**You can find my project repository on \[GitHub\]: https://github.com/Zhangxiaohan515/STATS506-HW**
+
+## a. The names of the variables in this data are way too long. Rename the columns of the data to more reasonable lengths.
+
+```{r}
+cars<-read.csv("C:/Preparation for UMich/Computational Methods and Tools-506/Assignment-for-STATS506/cars.csv")
+rename<-c("Height","Length","Width","Driveline","Engine_type","Hybrid",
+          "Forward_gears_number","Transmission","City_mpg","Fuel_type",
+          "Highway_mpg","Classification","ID","Make","Model_year",
+          "Year","Horsepower","Torque")
+names(cars)<-rename
+cars<-as.data.frame(cars)
+```
+
+## b. Restrict the data to cars whose Fuel Type is “Gasoline”.
+
+```{r}
+cars1<-cars[cars$Fuel_type=="Gasoline",]
+```
+
+## c. Examine the distribution of highway gas mileage. Consider whether a transformation could be used.
+
+```{r}
+cars1<- cars1[!is.na(cars1$Highway_mpg),]
+hist(cars1$Highway_mpg)
+```
+
+*We can find the data shows significant right skewness, so we use a log transformation to flatten the right-skewed data, making it closer to a normal distribution.*
+
+```{r}
+cars1$Highway_mpg_log<-log(cars1$Highway_mpg)
+hist(cars1$Highway_mpg_log)
+```
+
+## d. Fit a linear regression model predicting MPG on the highway.
+
+```{r}
+model<-lm(Highway_mpg_log ~ Torque+Horsepower+Height+Length+Width+factor(Year),
+          data=cars1)
+model
+summary(model)
+```
+
+*My answer: The coefficient for Torque is -2.294e-03, which means that Torque and Highway_mpg_log have negative relationship. When Torque increases, it leads to a decrease in Highway_mpg_log. To be more specific, every 1-unit increase in Torque, Highway_mpg_log decreases by 0.23%; when Highway_mpg_log is converted to original scale Highway_mpg, Highway_mpg decreases by almost 0.998.*
+
+## e. It seems reasonable that there may be an interaction between torque and horsepower.
+
+```{r}
+# Refit the lm
+model_2<-lm(Highway_mpg_log~Torque*Horsepower+Height+Length+Width+factor(Year),data = cars1)
+model_2
+summary(cars1$Torque)
+summary(cars1$Horsepower)
+summary(cars1$Year)
+library(emmeans)
+
+# We choose Horsepower in 1st quarter, median and 3rd quarter to show.
+emmip(model_2, Horsepower ~ Torque, at = list(Torque = c(98, 257, 774), Horsepower = c(185, 263, 317)))
+
+# We choose Horsepower in minimum, median and maximum, Year in 2011 to show.
+emmip(model_2, Horsepower ~ Torque, at = list(Torque = c(98, 257, 774), Horsepower = c(100, 263, 638), Year = 2011))
+
+```
+
+*We can see that as horsepower increases, the slope of the relationship between torque and MPG decreases. As torque increases, the rate at which MPG decreases becomes less steep. In other words, with higher horsepower, the decline in MPG slows down as torque rises.*
+
+## f. Calculate beta from d. manually (without using lm) by first creating a proper design matrix, then using matrix algebra to estimate beta.
+
+*We use the ordinary least squares to conclude beta=(X\^T X)\^{-1} X\^T y*
+
+```{r}
+X<- model.matrix(~ Torque + Horsepower+Height
+                  +Length+Width+factor(Year), data=cars1)
+y<- cars1$Highway_mpg_log
+X_T <- t(X) 
+beta<-solve(X_T %*% X)%*% (X_T %*%y)
+beta
+
+print(coef(model))
+```
+
+*We can see clearly that Torque in beta is equal to the prior coefficient in Torque.*

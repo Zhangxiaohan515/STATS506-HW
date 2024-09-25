@@ -1,0 +1,180 @@
+---
+title: "Assignment2#Pro_1"
+format: html
+---
+
+*You can find my project repository on \[GitHub\]: https://github.com/Zhangxiaohan515/STATS506-HW*
+
+## a_version1: Implement this game using a loop.
+
+```{r}
+#' Title: play_dice1
+#' @param number 
+#' @return total_winning
+play_dice1<-function(number){
+  total_winning <-0
+  for (i in 1:number){
+    roll<-sample(1:6,1)
+    
+    if (roll ==3||roll==5){
+      winning <- 2*roll-2
+      total_winning <- winning +total_winning
+    }
+    else{
+      total_winning <- total_winning -2
+    }}
+  return(total_winning)
+}
+```
+
+## a_version2: Implement this game using built-in R vectorized functions.
+
+```{r}
+#' Title: play_dice2
+#' @param number 
+#' @return total_winning
+
+play_dice2<-function(number){
+  rolls<-sample(1:6, number, replace = TRUE)
+  
+  winning <- ifelse(rolls==3|rolls==5, 2*rolls-2, -2)
+  
+  total_winning <- sum(winning)
+  return(total_winning)
+}
+```
+
+## a_version3: Implement this by rolling all the dice into one and collapsing the die rolls into a single table().
+
+```{r}
+#' Title: play_dice3
+#' @param number 
+#' @return total_winning
+
+play_dice3<-function(number){
+  
+  total_winning <-0
+  rolls<-sample(1:6, number, replace = TRUE)
+  roll_counts <- table(rolls)
+  
+  if("3" %in% names(roll_counts)){
+    total_winning<-total_winning+ 2*3*roll_counts["3"]
+#    print(roll_counts["3"])
+  }
+  if("5" %in% names(roll_counts)){
+    total_winning<-total_winning+ 2*5*roll_counts["5"]
+#    print(roll_counts["5"])
+  }
+  total_winning<-total_winning-2*number
+
+  return(total_winning)
+}
+```
+
+## a_version4: Implement this game by using one of the “apply” functions.
+
+```{r}
+#' Title: play_dice4
+#' @param number 
+#' @return total_winning
+
+play_dice4 <-function(number){
+  
+  rolls<-sample(1:6, number, replace = TRUE)
+
+  winning<-sapply(rolls, function(roll){
+    ifelse(roll==3|roll==5, 2*roll-2, -2)
+  })
+  total_winning <- sum(winning)
+  return(total_winning)
+}
+```
+
+## b: Demonstrate that all versions work. Do so by running each a few times, once with an input a 3, and once with an input of 3,000.
+
+```{r}
+input1<-3
+play_dice1(input1)
+play_dice2(input1)
+play_dice3(input1)
+play_dice4(input1)
+
+input2<-3000
+play_dice1(input2)
+play_dice2(input2)
+play_dice3(input2)
+play_dice4(input2)
+```
+
+## c: Demonstrate that the four versions give the same result. Test with inputs 3 and 3,000. (You will need to add a way to control the randomization.)
+
+```{r}
+# Test with 3
+set.seed(3)
+result1<-play_dice1(3)
+set.seed(3)
+result2<-play_dice2(3)
+set.seed(3)
+result3<-play_dice3(3)
+set.seed(3)
+result4<-play_dice4(3)
+cat("Result1:",result1,";","Result2:", result2,";",
+    "Result3:", result3,";", "Result4:",result4,
+    ", so four versions have the same results.")
+
+# Test with 3000
+set.seed(123)
+result1<-play_dice1(3000)
+set.seed(123)
+result2<-play_dice2(3000)
+set.seed(123)
+result3<-play_dice3(3000)
+set.seed(123)
+result4<-play_dice4(3000)
+cat("Result1:",result1,";","Result2:", result2,";",
+    "Result3:", result3,";", "Result4:",result4,
+    ", so four versions have the same results.")
+```
+
+## d: Use the microbenchmark package to clearly demonstrate the speed of the implementations.
+
+```{r}
+library(microbenchmark)
+microbenchmark(play_dice1(1000), play_dice2(1000), 
+               play_dice3(1000), play_dice4(1000))
+microbenchmark(play_dice1(100000), play_dice2(100000),
+               play_dice3(100000), play_dice4(100000))
+
+cat("We can see that the second version is the fastest; the first and the fourth are so slow, because both of them have the loop, it cost so much time, especially when the input number is so large. And the second version has vectorization, which can improve the efficiency.")
+```
+
+*the efficiency: version2 \> version3 \> version4 \>version1*
+
+## e: Do you think this is a fair game? Defend your decision with evidence based upon a Monte Carlo simulation.
+
+```{r}
+#' Title: Monte Carlo Simulation
+#' @param number 
+#' @return expected_value
+
+montecarlo_simulation <- function(number) {
+  results <- numeric(number)  # store every time
+  
+  for (i in 1:number) {
+    roll <- sample(1:6, 1)  
+    if (roll == 3 || roll == 5) {
+      results[i] <- 2 * roll - 2  
+    } 
+    else {results[i] <- -2  
+    }
+  }
+  
+  expected_value <- mean(results)  # compute the mean expected value
+  return(expected_value)
+}
+
+set.seed(42)
+expected_value <- montecarlo_simulation(100000)
+expected_value
+cat("The game is unfair because the expected value is approximately 0.66, which means that the player can get winnings for each dice game with 1 roll at a large possibility.")
+```
