@@ -1,0 +1,338 @@
+---
+title: "HW#4"
+author: "Xiaohan Zhang"
+format:
+  html:
+    embed-resources: true
+---
+* https://github.com/Zhangxiaohan515/STATS506-HW
+## Problem1
+### a
+```{r}
+# Get data 
+library(haven)
+vix_data <-read_xpt("C:/Preparation for UMich/Computational Methods and Tools-506/Assignment-for-STATS506/VIX_D.XPT")
+demo_data <-read_xpt("C:/Preparation for UMich/Computational Methods and Tools-506/Assignment-for-STATS506/DEMO_D.XPT")
+
+# Merge the data
+merged_data <-merge(vix_data,demo_data,by="SEQN")
+nrow(merged_data)
+```
+### b
+```{r}
+library(dplyr)
+library(knitr)
+ 
+merged_data<-
+  merged_data %>%
+  mutate(age_group = cut(RIDAGEYR, breaks = seq(0,100, by=10),right=FALSE))
+
+# Compute the proportion of respondents who wear glasses for distance vision
+
+proportion_respondents<- merged_data%>%
+  group_by(age_group)%>%
+  summarise(
+    respondents=n(),
+    glasses_worn=sum(VIQ220==1,na.rm=TRUE),
+    proportion= round(glasses_worn/respondents,3
+  ))
+
+
+# produce a nice table
+kable(proportion_respondents, caption = "Proportion of respondents within each 10 year age bracket")
+```
+### c
+```{r}
+
+table(merged_data$VIQ220) 
+# extract VIQ220=1 or VIQ220=2
+# VIQ220=1--1--wear glasses;
+# VIQ220=2--0--not wear glasses;
+model_data<-merged_data[merged_data$VIQ220==1|merged_data$VIQ220==2,]
+model_data$VIQ220<-ifelse(model_data$VIQ220==1, 1, 0)
+
+# 1. Predictor: age
+
+model_1<- glm(VIQ220~RIDAGEYR, data=model_data, family = binomial)
+model_1
+
+# 2. Predictor: age, race, gender
+model_2<-glm(VIQ220~RIDAGEYR+RIDRETH1+RIAGENDR, data=model_data,family = binomial)
+model_2
+# 3. Predictor: age, race, gender, Poverty Income ratio
+model_3<-glm(VIQ220~RIDAGEYR+RIDRETH1+RIAGENDR+INDFMPIR, data=model_data,family = binomial)
+model_3
+
+# produce a nice table
+library(pscl)
+
+
+model_result<-function(model){
+  # compute odds ratios
+  odds_ratio<-exp(coef(model))
+  # extract AIC
+  AIC<-AIC(model)
+  # extract pseudo
+  pseudo_r2<-pR2(model)["McFadden"]
+  # extract the sample size
+  n<-nobs(model)
+  
+  return(list(odds_ratio = odds_ratio, AIC = AIC, pseudo_r2 = pseudo_r2, n = n))
+}
+
+mod1_result<-model_result(model_1)
+mod2_result<-model_result(model_2)
+mod3_result<-model_result(model_3)
+
+# produce logistic regression models results
+LRM_table <- data.frame(
+  'Model' = c("Model 1", "Model 2", "Model 3"),
+  
+  'Sample size' = c(mod1_result$n, 
+                    mod2_result$n, mod3_result$n),
+  
+  'Odds Ratio Age' =round(c(mod1_result$odds_ratio["RIDAGEYR"], 
+                            mod2_result$odds_ratio["RIDAGEYR"],
+                            mod3_result$odds_ratio["RIDAGEYR"]),3),
+  
+  'Odds Ratio Race' = round(c(NA,
+                              mod2_result$odds_ratio["RIDRETH1"],
+                              mod3_result$odds_ratio["RIDRETH1"]),3),
+  
+  'Odds Ratio Gender' = round(c(NA,
+                                mod2_result$odds_ratio["RIAGENDR"],
+                                mod3_result$odds_ratio["RIAGENDR"]),3),
+  
+  'Odds Ratio Poverty' = round(c(NA,
+                                 NA,
+                                 mod3_result$odds_ratio["INDFMPIR"]),3),
+ 
+   'Pseudo R2' = round(c(mod1_result$pseudo_r2,
+                        mod2_result$pseudo_r2,
+                        mod3_result$pseudo_r2),3),
+ 
+   'AIC' = round(c(mod1_result$AIC, 
+                  mod2_result$AIC, 
+                  mod3_result$AIC),3)
+)
+
+kable(LRM_table, caption = "Logistic Regression Results")
+```
+
+### d
+```{r}
+
+# Odds
+odds_ratio_gender <- exp(coef(model_3)["RIAGENDR"])
+round(odds_ratio_gender,2)
+
+cat("We can observe the odds ratio is:",
+    round(odds_ratio_gender,2),", which is less than 1.0. 
+    This means the ratio between male and female has some difference, female are more likely to wear glasses.")
+
+glasses_worn<-sum(merged_data$VIQ220==1,na.rm=TRUE)
+# Proportion of wearing glasses for male and female
+gender_glasses<- merged_data%>%
+  group_by(RIAGENDR)%>%
+  summarise(
+    respondents=n(),
+    glasses_worn=sum(VIQ220==1,na.rm=TRUE),
+    proportion= round(glasses_worn/respondents,3
+  ))
+
+kable(gender_glasses, caption = "The Proportion of Wearing Glasses for Male and Female")
+
+# We did the prop_test to test the difference between male and female who wear glasses.
+prop_test<-prop.test(x=gender_glasses$glasses_worn,
+                     n=gender_glasses$respondents)
+prop_test
+
+cat("We can observe that the p-value is less than 0.05, which means the ratio between male and female has strong difference.")
+```
+
+## Problem2
+
+### a
+```{r}
+library(RSQLite)
+library(dplyr)
+library(DBI)
+db_path<-"C:/Preparation for UMich/Computational Methods and Tools-506/Assignment-for-STATS506/sakila_master.db"
+
+db<-dbConnect(SQLite(),db_path)
+tables<- dbListTables(db)
+tables
+
+gg<- function(query){
+  dbGetQuery(db, query)
+}
+
+## method 1
+release_films <-gg("
+     SELECT film_id, title, release_year
+       FROM film
+")
+release_films
+
+min_year<-min(release_films$release_year, na.rm=TRUE)
+min_year
+
+num_films_2006<-nrow(release_films[release_films$release_year==2006,])  
+num_films_2006
+
+## method 2
+
+release_films_2 <-gg("
+      SELECT film_id, title, release_year
+      FROM film
+      WHERE release_year = 
+                (SELECT MIN(release_year) 
+                 FROM film)
+                     ")
+nrow(release_films_2)
+
+
+```
+We can observe the earliest movie is released in 2006; the total number of movies in that year is 1000.
+
+### b
+```{r}
+# method 1
+category_df<-gg("SELECT *
+                   FROM category")
+film_category_df<-gg("SELECT *
+                   FROM film_category")
+
+genre_movie1<-category_df %>%
+  inner_join(film_category_df, by=c("category_id" = "category_id")) %>%
+  group_by(name)%>%
+  summarise(film_count=n())%>%
+  arrange(film_count)
+
+genre_movie1
+
+# method 2
+genre_movie2<-gg("
+   SELECT c.name AS genre, COUNT(fc.film_id) AS film_count
+   FROM category AS c
+   INNER JOIN film_category AS fc
+         ON c.category_id = fc.category_id
+   GROUP BY c.name
+   ORDER BY film_count
+   ")
+
+genre_movie2
+```
+
+We can observe that the least common genre is Music; there are 51 movies in this genre.
+
+### c
+```{r}
+# method 1
+customer_df <- gg("SELECT * 
+                     FROM customer")
+address_df <- gg("SELECT * 
+                    FROM address")
+city_df <- gg("SELECT * 
+                 FROM city")
+country_df <- gg("SELECT * 
+                    FROM country")
+countries_13_customers1 <- customer_df%>%
+  inner_join(address_df, by=c("address_id"="address_id"))%>%
+  inner_join(city_df, by=c("city_id"="city_id"))%>%
+  inner_join(country_df, by=c("country_id"="country_id"))%>%
+  group_by(country)%>%
+  summarise(customer_count = n())%>%
+  filter(customer_count==13)
+
+countries_13_customers1
+
+# method 2
+countries_13_customers2 <- gg("
+    SELECT co.country_id, co.country, COUNT(cu.customer_id) AS customer_count
+      FROM customer AS cu
+      INNER JOIN address AS ad
+        ON cu.address_id = ad.address_id
+      INNER JOIN city AS ci
+        ON ad.city_id = ci.city_id
+      INNER JOIN country AS co
+        ON co.country_id = ci.country_id
+      
+      GROUP BY co.country
+      HAVING customer_count=13
+   ")
+countries_13_customers2
+
+```
+Argentina and Nigeria both have 13 customers.
+
+## Problem3
+### a
+```{r}
+# Get data and import the csv
+data<- read.csv("C:/Preparation for UMich/Computational Methods and Tools-506/Assignment-for-STATS506/us-500.csv")
+data<-data.frame(data)
+
+email_address<-data$email
+
+total_number<-length(email_address)
+com_email_number<-sum(grepl("\\.com$",email_address))
+com_proportion<-com_email_number/total_number
+com_proportion
+```
+
+### b
+```{r}
+# find all the alphanumeric character addresses and exclude them
+other_character_proportion <- mean(grepl("[^a-zA-Z0-9@\\.]",email_address))
+# email_address[grepl("[^a-zA-Z0-9@\\.]",email_address)]
+other_character_proportion
+
+```
+### c
+```{r}
+phone_number<-data$phone1
+
+area_codes<-substr(phone_number,1,3)
+
+
+area_code_order <- sort(table(area_codes),decreasing = TRUE)
+head(area_code_order,5)
+
+```
+
+We can observe that 973、212、215、410、201 are the most common area codes.
+
+### d
+```{r}
+address<-data$address
+apt_number <- gsub(".*#(\\d+)$", "\\1", address)
+apt_number <- ifelse(grepl("#\\d+", address), apt_number, NA)
+
+table(apt_number)
+
+
+# Compute the log of apt_number
+apt_number<-as.numeric(apt_number)
+apt_number<- apt_number[!is.na(apt_number)]
+log_apt_number<-log(apt_number)
+
+hist(log_apt_number, main="Log of Apartment numbers Histogram", xlab="Log of Apt Numbers",ylab = "Frequency")
+
+```
+
+### e
+```{r}
+# Benford's law requires P(d)=log_10(1+1/d)
+leading_digit<-substr(apt_number,1,1)
+total_ld<-length(leading_digit)
+digit_distribution<-table(leading_digit)/total_ld
+d=1:9
+benford_distribution<-(log10(1+1/d))
+names(benford_distribution)<-d
+digit_distribution
+cat("The leading_digit of benford_distribution is:\n")
+benford_distribution
+
+```
+* We can observe there are huge difference between the distribution of actual apt numbers we have and the benford distribution, so the data cannot be considered as real data.
