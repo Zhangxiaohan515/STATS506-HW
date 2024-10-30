@@ -1,0 +1,188 @@
+---
+title: "Assignment4"
+author: "Xiaohan Zhang"
+format:
+  html:
+    embed-resources: true
+---
+* https://github.com/Zhangxiaohan515/STATS506-HW
+
+## Problem 1- Tidyverse
+
+```{r}
+library("nycflights13")
+library(tidyverse)
+
+head(flights)
+
+library(dplyr)
+# a. produce a tibble
+# First table: The departure delay table
+departure_delays <- flights%>%
+  group_by(dest)%>% # per airport
+  filter(n()>=10)%>%
+  ungroup()%>%
+  group_by(origin)%>%
+  summarise(mean_dep_delay=mean(dep_delay, na.rm=TRUE),
+            median_dep_delay=median(dep_delay,na.rm=TRUE))%>%
+  inner_join(airports, by=c("origin"="faa"))%>%
+  select(name, mean_dep_delay,median_dep_delay)%>%
+  arrange(desc(mean_dep_delay))
+departure_delays
+
+# Second table: The arrival delay table
+arrival_delays <- flights %>%
+  group_by(dest)%>% # per airport
+  filter(n()>=10)%>%
+  summarise(mean_arr_delay=mean(arr_delay,na.rm=TRUE),
+            median_arr_delay=median(arr_delay,na.rm=TRUE))%>%
+  inner_join(airports, by=c("dest"="faa"))%>%
+  select(name, mean_arr_delay,median_arr_delay)%>%
+  arrange(desc(mean_arr_delay))
+arrival_delays
+
+```
+
+```{r}
+# b. Calculate the speed of every flight
+flights_speed<- flights%>%
+  filter(!is.na(air_time) & !is.na(distance)) %>% 
+  mutate(speed = distance / (air_time/60))
+
+merge_flight_planes<-inner_join(flights_speed, planes, by="tailnum")
+
+merge_flight_planes<- merge_flight_planes%>%
+  filter(!is.na(model))
+
+fastest_plane <- merge_flight_planes %>%
+  group_by(model)%>%
+  summarise(average_speed = mean(speed.x, na.rm=TRUE),
+            flight_count=n())%>%
+  arrange(desc(average_speed))%>%
+  slice(1)
+
+fastest_plane
+
+cat("The number of flights with the fastest average speed are",fastest_plane$flight_count,".")  
+```
+
+## Problem 2- get_temp()
+```{r}
+
+library(readr)
+nnmaps<- read_csv("C:/Users/张笑菡/Desktop/Preparation for UMich/Computational Methods and Tools-506/Lecture/chicago-nmmaps.csv")
+# To avoid naming conflicts
+
+library(dplyr)
+
+```
+
+```{r}
+get_temp <- function(month, year, data, celsius = FALSE, average_fn = mean){
+  # The input month is character format
+  if (is.character(month)){
+    # Transform month input to numeric format
+    month <- match(tolower(month), tolower(month.name)) 
+  } else if(!is.numeric(month) || month < 1 || month > 12){
+    warning("Month should be between 1 and 12!")
+    return(NA)
+  }
+    
+  if (!year %in% data$year){
+    warning("Year is not included the data!")
+    return(NA)
+  }
+  
+  temperature <- data %>%
+    filter(month == month, year == year ) %>%
+    summarise(mean_temp = average_fn(temp)) %>%
+    select(mean_temp)
+    
+  temp = temperature$mean_temp
+ # Transform the temperature to celsius if celsius is TRUE.
+  if (celsius == TRUE){
+    temp = (temp - 32)/1.8}
+  
+  return(temp)
+  
+}
+```
+
+
+```{r}
+# To verify the get_temp function
+get_temp("Apr", 1999, data = nnmaps)
+get_temp("Apr", 1999, data = nnmaps, celsius = TRUE)
+get_temp(10, 1998, data = nnmaps, average_fn = median)
+get_temp(13, 1998, data = nnmaps)
+get_temp(2, 2005, data = nnmaps)
+get_temp("November", 1999, data =nnmaps, celsius = TRUE,
+         average_fn = function(x) {
+           x %>% sort -> x
+           x[2:(length(x) - 1)] %>% mean %>% return
+         })
+```
+## Problem 3 - Visualization
+
+```{r}
+
+
+df<-read_csv("C:/Users/张笑菡/Desktop/Preparation for UMich/Computational Methods and Tools-506/Lecture/df_for_ml_improved_new_market.csv")
+
+library(ggplot2)
+
+# a.
+avg_price_per_year <- df %>%
+  group_by(year)%>%
+  summarise(avg_price = mean(price_usd, na.rm=TRUE))
+
+ggplot(avg_price_per_year, aes(x=year, y=avg_price))+
+  geom_line(color="grey",lwd=1)+
+  geom_point(color="red")+
+  labs(title="Average Sales Price Over Time",
+       x="Year", y="Average Price (USD)")
+
+```
+According to the graph, we can observe the change of sales price in USD greatly over time.
+The overall trend of average sales price from 2000 to 2012 is upward. On 2008, it reaches the summit. Near 2000 and 2001, it reaches its lowest and stays stable.
+
+```{r}
+# b.
+library(tidyr)
+df_distribution <- df %>%
+  pivot_longer(cols = starts_with("Genre___"), names_to = "genre", values_to = "count") %>%
+  filter(count == 1)
+
+ggplot(df_distribution, aes(x = year, fill = genre)) +
+  geom_bar(position = "fill") + 
+  labs(title = "Distribution of Genre of Sales Across Years",
+       x = "Year", y = "Proportion")   
+```
+The distribution of genre of sales across years changes a lot.
+Painting and Photography: These categories increased significantly around the year 2000 and maintained a higher proportion in subsequent years, though they declined somewhat before 2010.
+
+Sculpture : This genre remained relatively stable over the entire period, consistently holding a large share, with a slight increase after 2005.
+
+Others: This category had a high proportion in the early years (before 2000) but gradually declined, indicating it may have been replaced in popularity by other genres.
+
+Print: The proportion of this genre shows relatively minor fluctuations across the years, with no significant trend.
+
+
+```{r}
+# c.
+df_long <- df %>%
+  pivot_longer(cols = starts_with("Genre___"), names_to = "genre", values_to = "count") %>%
+  filter(count == 1) %>%  #
+  group_by(year, genre) %>%
+  summarise(avg_price = mean(price_usd, na.rm = TRUE))
+
+ggplot(df_long, aes(x = year, y = avg_price, color = genre)) +
+  geom_line() +
+  geom_point()+
+  facet_wrap("genre")+
+  labs(title = "Sales Price Over Time by Genre",
+       x = "Year", y = "Average Sales Price (USD)")
+```
+
+Each genre shows a unique trend in sales price over time.
+While some genres, like Photography and Print, show rapid price increases followed by volatility, others, like Sculpture and Painting, demonstrate more gradual and consistent growth. This implies that genre strongly influences the stability and appreciation of sales prices in the art market over time.
